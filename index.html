@@ -1,64 +1,115 @@
+@'
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Website</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Study Tracker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #eef2f7; color: #2d3748; }
+    header { background: #1a2332; color: white; padding: 28px 40px; text-align: center; }
+    header h1 { font-size: 2rem; font-weight: 700; }
+    header p { color: #e8a020; margin-top: 6px; font-size: 0.95rem; }
+    .container { max-width: 1100px; margin: 36px auto; padding: 0 20px; }
+    .form-card { background: white; border-radius: 14px; padding: 28px 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 32px; }
+    .form-card h2 { font-size: 1.2rem; margin-bottom: 20px; color: #1a2332; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .field label { display: block; font-size: 0.8rem; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .field input, .field textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; background: #f8fafc; resize: vertical; }
+    .field input:focus, .field textarea:focus { outline: none; border-color: #4a90d9; background: white; }
+    .field.wide { grid-column: 1 / -1; }
+    .add-btn { margin-top: 20px; background: #e8a020; color: white; border: none; padding: 12px 30px; border-radius: 9px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    .add-btn:hover { background: #c8861a; }
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 32px; }
+    .chart-card { background: white; border-radius: 14px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    .chart-card h3 { font-size: 1rem; color: #1a2332; margin-bottom: 16px; font-weight: 600; }
+    .chart-card canvas { max-height: 240px; }
+    .timeline-card { background: white; border-radius: 14px; padding: 28px 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    .timeline-card h2 { font-size: 1.2rem; color: #1a2332; margin-bottom: 24px; }
+    .timeline { position: relative; padding-left: 28px; }
+    .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: #e2e8f0; }
+    .tl-item { position: relative; margin-bottom: 24px; }
+    .tl-item::before { content: ''; position: absolute; left: -24px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: #e8a020; border: 2px solid white; box-shadow: 0 0 0 2px #e8a020; }
+    .tl-date { font-size: 0.75rem; color: #a0aec0; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .tl-body { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; }
+    .tl-subject { font-weight: 700; font-size: 1rem; color: #1a2332; }
+    .tl-meta { font-size: 0.85rem; color: #718096; margin-top: 4px; }
+    .tl-concepts { font-size: 0.82rem; color: #4a5568; margin-top: 8px; background: #eef2f7; border-radius: 6px; padding: 6px 10px; }
+    .empty-msg { text-align: center; color: #a0aec0; font-size: 0.95rem; padding: 20px 0; }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Welcome to My Website</h1>
-    <p>Deployed automatically with GitHub Actions and AWS</p>
-  </header>
-  <main>
-    <div class="card">
-      <h2>About Me</h2>
-      <p>This is my portfolio website hosted on AWS S3 and CloudFront.</p>
+<header>
+  <h1>📚 Study Tracker</h1>
+  <p>Deployed with GitLab CI/CD and AWS ECS</p>
+</header>
+<div class="container">
+  <div class="form-card">
+    <h2>➕ Log a Study Session</h2>
+    <div class="form-grid">
+      <div class="field"><label>Subject</label><input type="text" id="subject" placeholder="e.g. Mathematics" /></div>
+      <div class="field"><label>Hours Studied</label><input type="number" id="hours" placeholder="e.g. 2" min="0" step="0.5" /></div>
+      <div class="field"><label>Focus Time (mins)</label><input type="number" id="focus" placeholder="e.g. 90" min="0" /></div>
+      <div class="field"><label>Break Time (mins)</label><input type="number" id="breakTime" placeholder="e.g. 30" min="0" /></div>
+      <div class="field wide"><label>Concepts Covered</label><textarea id="concepts" rows="2" placeholder="e.g. Derivatives, Integration by parts..."></textarea></div>
     </div>
-  </main>
-  <script src="script.js"></script>
+    <button class="add-btn" onclick="addSession()">Log Session</button>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><h3>🥧 Focus vs Break Time</h3><canvas id="pieChart"></canvas></div>
+    <div class="chart-card"><h3>📊 Sessions Per Day</h3><canvas id="barChart"></canvas></div>
+  </div>
+  <div class="timeline-card">
+    <h2>🕒 Session Timeline</h2>
+    <div class="timeline" id="timeline"><p class="empty-msg">No sessions yet. Log your first one above!</p></div>
+  </div>
+</div>
+<script>
+  let sessions = JSON.parse(localStorage.getItem('studySessions') || '[]');
+  const pieChart = new Chart(document.getElementById('pieChart').getContext('2d'), {
+    type: 'pie',
+    data: { labels: ['Focus Time', 'Break Time'], datasets: [{ data: [0, 0], backgroundColor: ['#4a90d9', '#e8a020'], borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  });
+  const barChart = new Chart(document.getElementById('barChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'Sessions', data: [], backgroundColor: '#4a90d9', borderRadius: 6 }] },
+    options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+  });
+  function addSession() {
+    const subject = document.getElementById('subject').value.trim();
+    const hours = parseFloat(document.getElementById('hours').value);
+    const focus = parseInt(document.getElementById('focus').value) || 0;
+    const breakTime = parseInt(document.getElementById('breakTime').value) || 0;
+    const concepts = document.getElementById('concepts').value.trim();
+    if (!subject || isNaN(hours) || hours <= 0) { alert('Please enter at least a Subject and valid Hours Studied.'); return; }
+    sessions.unshift({ subject, hours, focus, breakTime, concepts, date: new Date().toISOString() });
+    localStorage.setItem('studySessions', JSON.stringify(sessions));
+    ['subject','hours','focus','breakTime','concepts'].forEach(id => { document.getElementById(id).value = ''; });
+    render();
+  }
+  function render() {
+    pieChart.data.datasets[0].data = [sessions.reduce((s,x)=>s+(x.focus||0),0), sessions.reduce((s,x)=>s+(x.breakTime||0),0)];
+    pieChart.update();
+    const counts = {};
+    sessions.forEach(s => { const d = s.date.slice(0,10); counts[d]=(counts[d]||0)+1; });
+    const sorted = Object.keys(counts).sort();
+    barChart.data.labels = sorted.map(d => { const [y,m,day]=d.split('-'); return `${day}/${m}`; });
+    barChart.data.datasets[0].data = sorted.map(d => counts[d]);
+    barChart.update();
+    const tl = document.getElementById('timeline');
+    if (!sessions.length) { tl.innerHTML='<p class="empty-msg">No sessions yet. Log your first one above!</p>'; return; }
+    tl.innerHTML = sessions.map(s => {
+      const d = new Date(s.date);
+      const dateStr = d.toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'});
+      const timeStr = d.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+      return `<div class="tl-item"><div class="tl-date">${dateStr} · ${timeStr}</div><div class="tl-body"><div class="tl-subject">${s.subject}</div><div class="tl-meta">⏱ ${s.hours}h studied${s.focus?` · 🎯 ${s.focus} min focus`:''}${s.breakTime?` · ☕ ${s.breakTime} min break`:''}</div>${s.concepts?`<div class="tl-concepts">📝 ${s.concepts}</div>`:''}</div></div>`;
+    }).join('');
+  }
+  render();
+</script>
 </body>
 </html>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: Arial, sans-serif;
-  background: #f0f0f0;
-  color: #333;
-}
-
-header {
-  background: #232f3e;
-  color: white;
-  padding: 40px;
-  text-align: center;
-}
-
-header p {
-  margin-top: 10px;
-  color: #ff9900;
-}
-
-main {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 0 20px;
-}
-
-.card {
-  background: white;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.card h2 {
-  margin-bottom: 10px;
-  color: #232f3e;
-}
-console.log("Website loaded successfully!");
+'@ | Set-Content -Path "app\index.html" -Encoding UTF8
